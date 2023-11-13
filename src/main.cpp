@@ -48,8 +48,7 @@ void loop()
     numberOfInterrupts += interruptCounter;
     interruptCounter = 0;
     interruptToTime(numberOfInterrupts);
-
-    Serial.println(String(Timer.hours) + ":" + String(Timer.minutes) + ":" + String(Timer.seconds) + "." + String(Timer.tenth));
+    printf("%02u:%02u:%02u.%u\n",Timer.hours, Timer.minutes, Timer.seconds, Timer.tenth);
   }
 }
 
