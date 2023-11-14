@@ -19,6 +19,8 @@ struct timer
 
 timer Timer;
 
+bool started = false;
+
 // dichiarazione della interrupt handling routine
 void IRAM_ATTR onTimer();
 
@@ -27,6 +29,9 @@ void interruptToTime(int interrupts);
 void setup()
 {
   Serial.begin(115200);
+
+  pinMode(GPIO_NUM_23, INPUT_PULLUP);
+  pinMode(GPIO_NUM_22, INPUT_PULLUP);
 
   // impiego il timer hardware numero 0, con prescaler 80, conteggio in avanti
   timer0 = timerBegin(0, 80, true);
@@ -37,12 +42,22 @@ void setup()
   // impostazione del valore di soglia del contatore per innescare l'interrupt periodico
   timerAlarmWrite(timer0, 100000, true);
 
-  // abilitazione del timer
-  timerAlarmEnable(timer0);
 }
 
 void loop()
 {
+  //start
+  if(!digitalRead(GPIO_NUM_23))
+  {
+    timerAlarmEnable(timer0);
+    numberOfInterrupts = 0;
+  }
+  //stop
+  if(!digitalRead(GPIO_NUM_22))
+  {
+    timerAlarmDisable(timer0);
+  }
+
   if (interruptCounter > 0)
   {
     numberOfInterrupts += interruptCounter;
