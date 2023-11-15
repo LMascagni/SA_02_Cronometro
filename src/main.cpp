@@ -1,93 +1,75 @@
 #include <Arduino.h>
 
+// Definizione dei pin di start e stop
 #define startPin 23
-#define stopPin  22
+#define stopPin 22
 
-// puntatore alla struttura timer da associare al timer hardware
-hw_timer_t *timer0 = NULL;
-
-// segnala che si è verificato un interrupt del timer
-volatile int interruptCounter = 0;
-
-// conteggio totale degli interrupt periodici
-int numberOfInterrupts = 0;
-
-struct timer
+// Struttura per memorizzare le informazioni sul tempo
+struct Timer
 {
   int hours;
   int minutes;
   int seconds;
   int tenth;
+
+  // Funzione per aggiornare i valori di tempo
+  void update(int interrupts)
+  {
+    tenth = interrupts % 10;
+    seconds = (interrupts % 600 - interrupts % 10) / 10;
+    minutes = (interrupts % 36000 - interrupts % 600) / 600;
+    hours = (interrupts % 864000 - interrupts % 36000) / 36000;
+  }
+
+  // Funzione per stampare il tempo sulla porta seriale
+  void printTime()
+  {
+    Serial.printf("%02u:%02u:%02u.%u\n", hours, minutes, seconds, tenth);
+  }
 };
 
-timer Timer;
+hw_timer_t *timer0 = NULL;         // Puntatore al timer hardware
+volatile int interruptCounter = 0; // Contatore degli interrupt
+int numberOfInterrupts = 0;        // Numero totale degli interrupt
 
-// dichiarazione della interrupt handling routine
-void IRAM_ATTR onTimer();
+Timer timer; // Istanzia un oggetto della struct Timer
 
-//dichiarazione della funzione di conversione
-void interruptToTime(int interrupts);
+// Interrupt routine per il timer
+void IRAM_ATTR onTimer()
+{
+  interruptCounter++;
+}
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(115200);            // Inizializza la comunicazione seriale
+  pinMode(startPin, INPUT_PULLUP); // Imposta il pin di start come input con pull-up
+  pinMode(stopPin, INPUT_PULLUP);  // Imposta il pin di stop come input con pull-up
 
-  //definizione degli ingressi
-  pinMode(startPin, INPUT_PULLUP);
-  pinMode(stopPin, INPUT_PULLUP);
-
-  // impiego il timer hardware numero 0, con prescaler 80, conteggio in avanti
-  timer0 = timerBegin(0, 80, true);
-
-  // associazione della ISR al timer per gestire l'interrupt periodico
-  timerAttachInterrupt(timer0, onTimer, true);
-
-  // impostazione del valore di soglia del contatore per innescare l'interrupt periodico
-  timerAlarmWrite(timer0, 100000, true);
-
+  timer0 = timerBegin(0, 80, true);            // Inizializza il timer hardware
+  timerAttachInterrupt(timer0, onTimer, true); // Allega l'ISR al timer
+  timerAlarmWrite(timer0, 100000, true);       // Imposta il valore di soglia del contatore per l'interrupt
 }
 
 void loop()
 {
-  //start
-  if(!digitalRead(startPin))
-  {
-    //abilitazione del timer e azzeramento di conteggio
-    timerAlarmEnable(timer0);
-    numberOfInterrupts = 0;
+  if (!digitalRead(startPin))
+  {                           // Se il pin di start è attivo
+    timerAlarmEnable(timer0); // Abilita il timer
+    numberOfInterrupts = 0;   // Resetta il conteggio degli interrupt
   }
-  
-  //stop
-  if(!digitalRead(stopPin))
-  {
-    //disabilitazione del timer
-    timerAlarmDisable(timer0);
+
+  if (!digitalRead(stopPin))
+  {                            // Se il pin di stop è attivo
+    timerAlarmDisable(timer0); // Disabilita il timer
   }
 
   if (interruptCounter > 0)
-  {
-    numberOfInterrupts += interruptCounter;
-    interruptCounter = 0;
+  {                                         // Se ci sono interrupt avvenuti
+    numberOfInterrupts += interruptCounter; // Aggiorna il numero totale di interrupt
+    interruptCounter = 0;                   // Resetta il contatore degli interrupt
 
-    //conversione dei dati
-    interruptToTime(numberOfInterrupts);
-    
-    //stampa dei valori
-    printf("%02u:%02u:%02u.%u\n",Timer.hours, Timer.minutes, Timer.seconds, Timer.tenth);
+    timer.update(numberOfInterrupts); // Aggiorna la struct Timer con il nuovo tempo
+    timer.printTime();                // Stampa il tempo sulla porta seriale
   }
-}
-
-void interruptToTime(int interrupts)
-{
-  //coversione della variabile di conteggio
-  Timer.tenth   = interrupts % 10;
-  Timer.seconds = (interrupts % 600 - interrupts % 10)/10;
-  Timer.minutes = (interrupts % 36000 - interrupts % 600)/600;
-  Timer.hours   = (interrupts % 864000 - interrupts % 36000)/36000;
-}
-
-// definition of the interrupt handling routine
-void IRAM_ATTR onTimer()
-{
-  interruptCounter++;
 }
