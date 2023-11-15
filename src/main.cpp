@@ -1,5 +1,8 @@
 #include <Arduino.h>
 
+#define startPin 23
+#define stopPin  22
+
 // puntatore alla struttura timer da associare al timer hardware
 hw_timer_t *timer0 = NULL;
 
@@ -19,19 +22,19 @@ struct timer
 
 timer Timer;
 
-bool started = false;
-
 // dichiarazione della interrupt handling routine
 void IRAM_ATTR onTimer();
 
+//dichiarazione della funzione di conversione
 void interruptToTime(int interrupts);
 
 void setup()
 {
   Serial.begin(115200);
 
-  pinMode(GPIO_NUM_23, INPUT_PULLUP);
-  pinMode(GPIO_NUM_22, INPUT_PULLUP);
+  //definizione degli ingressi
+  pinMode(startPin, INPUT_PULLUP);
+  pinMode(stopPin, INPUT_PULLUP);
 
   // impiego il timer hardware numero 0, con prescaler 80, conteggio in avanti
   timer0 = timerBegin(0, 80, true);
@@ -47,14 +50,17 @@ void setup()
 void loop()
 {
   //start
-  if(!digitalRead(GPIO_NUM_23))
+  if(!digitalRead(startPin))
   {
+    //abilitazione del timer e azzeramento di conteggio
     timerAlarmEnable(timer0);
     numberOfInterrupts = 0;
   }
+  
   //stop
-  if(!digitalRead(GPIO_NUM_22))
+  if(!digitalRead(stopPin))
   {
+    //disabilitazione del timer
     timerAlarmDisable(timer0);
   }
 
@@ -62,13 +68,18 @@ void loop()
   {
     numberOfInterrupts += interruptCounter;
     interruptCounter = 0;
+
+    //conversione dei dati
     interruptToTime(numberOfInterrupts);
+    
+    //stampa dei valori
     printf("%02u:%02u:%02u.%u\n",Timer.hours, Timer.minutes, Timer.seconds, Timer.tenth);
   }
 }
 
 void interruptToTime(int interrupts)
 {
+  //coversione della variabile di conteggio
   Timer.tenth   = interrupts % 10;
   Timer.seconds = (interrupts % 600 - interrupts % 10)/10;
   Timer.minutes = (interrupts % 36000 - interrupts % 600)/600;
