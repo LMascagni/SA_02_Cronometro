@@ -1,3 +1,12 @@
+/*
+  Nome del Programma: Cronometro Arduino
+  Autore: [Il tuo nome o pseudonimo]
+  Scopo del Programma:
+  Questo programma implementa un cronometro utilizzando Arduino.
+  Il cronometro inizia quando il pin di startPin viene attivato sul fronte di discesa,
+  si ferma quando il pin di stopPin viene attivato e mostra il tempo trascorso sulla porta seriale.
+*/
+
 #include <Arduino.h>
 
 // Definizione dei pin di start e stop
@@ -5,16 +14,15 @@
 #define stopPin 22
 
 // Struttura per memorizzare le informazioni sul tempo
-struct Timer
-{
+struct Timer {
   int hours;
   int minutes;
   int seconds;
   int tenth;
 
   // Funzione per aggiornare i valori di tempo
-  void update(int interrupts)
-  {
+  void update(int interrupts) {
+    // Calcola ore, minuti, secondi e decimi in base al numero di interrupts
     tenth = interrupts % 10;
     seconds = (interrupts % 600 - interrupts % 10) / 10;
     minutes = (interrupts % 36000 - interrupts % 600) / 600;
@@ -22,54 +30,60 @@ struct Timer
   }
 
   // Funzione per stampare il tempo sulla porta seriale
-  void printTime()
-  {
+  void printTime() {
     Serial.printf("%02u:%02u:%02u.%u\n", hours, minutes, seconds, tenth);
   }
 };
 
-hw_timer_t *timer0 = NULL;         // Puntatore al timer hardware
-volatile int interruptCounter = 0; // Contatore degli interrupt
-int numberOfInterrupts = 0;        // Numero totale degli interrupt
+// Variabili globali
+hw_timer_t *timer0 = NULL;
+volatile int interruptCounter = 0;
+int numberOfInterrupts = 0;
+Timer timer;
 
-Timer timer; // Istanzia un oggetto della struct Timer
+bool startPinPrevState = HIGH;
+bool timerActive = false; // Flag per indicare se il cronometro è attivo o no
 
 // Interrupt routine per il timer
-void IRAM_ATTR onTimer()
-{
+void IRAM_ATTR onTimer() {
   interruptCounter++;
 }
 
-void setup()
-{
-  Serial.begin(115200);            // Inizializza la comunicazione seriale
+void setup() {
+  Serial.begin(115200); // Inizializza la comunicazione seriale
   pinMode(startPin, INPUT_PULLUP); // Imposta il pin di start come input con pull-up
   pinMode(stopPin, INPUT_PULLUP);  // Imposta il pin di stop come input con pull-up
 
-  timer0 = timerBegin(0, 80, true);            // Inizializza il timer hardware
+  // Inizializza il timer hardware
+  timer0 = timerBegin(0, 80, true);
   timerAttachInterrupt(timer0, onTimer, true); // Allega l'ISR al timer
-  timerAlarmWrite(timer0, 100000, true);       // Imposta il valore di soglia del contatore per l'interrupt
+  timerAlarmWrite(timer0, 100000, true); // Imposta il valore di soglia del contatore per l'interrupt
 }
 
-void loop()
-{
-  if (!digitalRead(startPin))
-  {                           // Se il pin di start è attivo
-    timerAlarmEnable(timer0); // Abilita il timer
-    numberOfInterrupts = 0;   // Resetta il conteggio degli interrupt
+void loop() {
+  bool startPinState = digitalRead(startPin);
+
+  // Avvia il cronometro solo se il pin di start è attivo sul fronte di discesa
+  if (startPinState == LOW && startPinPrevState == HIGH && !timerActive) {
+    timerActive = true;
+    timerAlarmEnable(timer0);
+    numberOfInterrupts = 0; // Resetta il conteggio degli interrupt
   }
 
-  if (!digitalRead(stopPin))
-  {                            // Se il pin di stop è attivo
-    timerAlarmDisable(timer0); // Disabilita il timer
+  // Disabilita il cronometro se il pin di stop è attivo
+  if (!digitalRead(stopPin)) {
+    timerAlarmDisable(timer0);
+    timerActive = false;
   }
 
-  if (interruptCounter > 0)
-  {                                         // Se ci sono interrupt avvenuti
-    numberOfInterrupts += interruptCounter; // Aggiorna il numero totale di interrupt
-    interruptCounter = 0;                   // Resetta il contatore degli interrupt
+  // Se ci sono interrupt avvenuti e il cronometro è attivo, aggiorna e stampa il tempo
+  if (interruptCounter > 0 && timerActive) {
+    numberOfInterrupts += interruptCounter;
+    interruptCounter = 0;
 
-    timer.update(numberOfInterrupts); // Aggiorna la struct Timer con il nuovo tempo
-    timer.printTime();                // Stampa il tempo sulla porta seriale
+    timer.update(numberOfInterrupts);
+    timer.printTime();
   }
+
+  startPinPrevState = startPinState; // Aggiorna lo stato precedente del pin di start
 }
