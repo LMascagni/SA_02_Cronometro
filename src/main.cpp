@@ -8,6 +8,7 @@
 */
 
 #include <Arduino.h>
+#include <Bounce2.h>
 
 // Definizione dei pin di start e stop
 #define startPin 23
@@ -39,7 +40,11 @@ struct Timer {
 hw_timer_t *timer0 = NULL;
 volatile int interruptCounter = 0;
 int numberOfInterrupts = 0;
+
 Timer timer;
+
+Bounce start = Bounce();
+Bounce stop = Bounce();
 
 bool startPinPrevState = HIGH;
 bool timerActive = false; // Flag per indicare se il cronometro è attivo o no
@@ -51,8 +56,12 @@ void IRAM_ATTR onTimer() {
 
 void setup() {
   Serial.begin(115200); // Inizializza la comunicazione seriale
-  pinMode(startPin, INPUT_PULLUP); // Imposta il pin di start come input con pull-up
-  pinMode(stopPin, INPUT_PULLUP);  // Imposta il pin di stop come input con pull-up
+
+  start.attach(startPin, INPUT_PULLUP);
+  stop.attach(stopPin, INPUT_PULLUP);
+
+  start.interval(100);
+  stop.interval(100);
 
   // Inizializza il timer hardware
   timer0 = timerBegin(0, 80, true);
@@ -61,17 +70,18 @@ void setup() {
 }
 
 void loop() {
-  bool startPinState = digitalRead(startPin);
+  start.update();
+  stop.update();
 
   // Avvia il cronometro solo se il pin di start è attivo sul fronte di discesa
-  if (startPinState == LOW && startPinPrevState == HIGH && !timerActive) {
+  if (start.fell() && !timerActive) {
     timerActive = true;
     timerAlarmEnable(timer0);
     numberOfInterrupts = 0; // Resetta il conteggio degli interrupt
   }
 
   // Disabilita il cronometro se il pin di stop è attivo
-  if (!digitalRead(stopPin)) {
+  if (stop.fell()) {
     timerAlarmDisable(timer0);
     timerActive = false;
   }
@@ -84,6 +94,4 @@ void loop() {
     timer.update(numberOfInterrupts);
     timer.printTime();
   }
-
-  startPinPrevState = startPinState; // Aggiorna lo stato precedente del pin di start
 }
