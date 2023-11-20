@@ -2,8 +2,8 @@
   Nome del Programma: Cronometro Arduino
   Autore: Mascagni Lorenzo
   Scopo del Programma:
-  Questo programma implementa un cronometro utilizzando Arduino.
-  Il cronometro inizia quando il pin di startPin viene attivato sul fronte di discesa,
+  Questo programma implementa un cronometro utilizzando ESP32.
+  Il cronometro inizia quando il pin di startPin viene attivato sul fronte di salita,
   si ferma quando il pin di stopPin viene attivato e mostra il tempo trascorso sulla porta seriale.
 */
 
@@ -31,7 +31,7 @@ struct Timer {
 
   // Funzione per stampare il tempo sulla porta seriale
   void printTime() {
-    Serial.printf("%02u:%02u:%02u.%u\n", hours, minutes, seconds, tenth);
+    printf("%02u:%02u:%02u.%u\n", hours, minutes, seconds, tenth);
   }
 };
 
