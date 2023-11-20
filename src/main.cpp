@@ -1,6 +1,6 @@
 /*
   Nome del Programma: Cronometro Arduino
-  Autore: [Il tuo nome o pseudonimo]
+  Autore: Mascagni Lorenzo
   Scopo del Programma:
   Questo programma implementa un cronometro utilizzando Arduino.
   Il cronometro inizia quando il pin di startPin viene attivato sul fronte di discesa,
