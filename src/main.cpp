@@ -1,5 +1,5 @@
 /*
-  Nome del Programma: Cronometro Arduino
+  Nome del Programma: Cronometro ESP32
   Autore: Mascagni Lorenzo
   Scopo del Programma:
   Questo programma implementa un cronometro utilizzando ESP32.
@@ -46,7 +46,6 @@ Timer timer;
 Bounce start = Bounce();
 Bounce stop = Bounce();
 
-bool startPinPrevState = HIGH;
 bool timerActive = false; // Flag per indicare se il cronometro è attivo o no
 
 // Interrupt routine per il timer
@@ -60,8 +59,8 @@ void setup() {
   start.attach(startPin, INPUT_PULLUP);
   stop.attach(stopPin, INPUT_PULLUP);
 
-  start.interval(100);
-  stop.interval(100);
+  start.interval(50);
+  stop.interval(50);
 
   // Inizializza il timer hardware
   timer0 = timerBegin(0, 80, true);
